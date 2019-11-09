@@ -1,0 +1,282 @@
+/*
+练习一:
+有以下结构
+struct student{
+	char name[32];
+	int age;
+	int classid;
+	bool sex;
+};
+写出函数,用函数重载的方式编写程序,统计出一个以上述结构为基准的结构体数组中:
+1.名字为x的出现多少次.
+2.年龄为x的出现多少次.
+3.班级为x的出现多少次.
+4.性别为x的出现多少次.
+例如:名字为x的可以是这样的声明:
+   int countName(student* src,int n,char* name)
+tip:可以考虑用缺省参数的方式或者回调函数的方式
+*/
+
+#include<cstring>
+#include<iostream>
+using namespace std;
+
+
+struct student{
+	char name[32];
+	int age;
+	int classid;
+	bool sex;//男:true 女:false
+};
+
+//判断是否相等
+bool cmpEql(student a, student b)
+{
+	return a.age == b.age;
+}
+
+int CountS(student *st, int n,student val, bool(*cmp)(student, student) = cmpEql)
+{
+	int i = 0;
+	int count = 0;
+	for (i = 0; i < n;i++)
+	{
+		if (cmp(st[i],val))
+		{
+			count++;
+		}
+	}
+	return count;
+}
+
+bool cmpEqlName(student a, student b)
+{
+	return strcmp(a.name,b.name) ? false : true;
+}
+
+bool cmpSex(student a, student b)
+{
+	return a.sex==b.sex;//return !(a.sex^b.sex);
+}
+
+int main()
+{
+	student st[] = {
+					{ "caixukun", 18, 1, true },
+					{ "qiaobiluo", 18, 1, false },
+					{ "wuyifan", 20, 2, true },
+					{ "luhan", 22, 2, true },
+					{ "lubenwei", 22, 2, true },
+					{ "caixukun", 18, 1, true },
+					{ "yangchaoyue", 20, 1, false }
+	};
+	student test= { "caixukun", 18, 1, true };
+	//cout << CountS(st, 7, test, cmpEqlName) << endl;
+	cout << CountS(st, 7, test, cmpSex) << endl;
+	system("pause");
+	return 0;
+}
+
+
+
+/*
+练习二:
+//1.声明一个扑克牌类,拥有方法:传入花色和点数生成扑克牌,打印扑克牌
+//2.声明一个玩家类:每人拥有18张扑克牌,拥有方法:增加手牌(摸牌),展示手牌,其中展示的手牌要求降序展示
+完成程序:
+1.随机生成18张扑克牌,当一个玩家的手牌
+2.用54张不同的扑克牌构成牌堆,发给三个玩家
+*/
+#include<iostream>
+using namespace std;
+#include <cstdio>
+#include <cstdlib>
+#include<ctime>
+
+enum {
+	SPADES,
+	HEARTS,
+	CLUBS,
+	DIAMONS,
+	JOKER
+};
+
+//全局变量g_   局部静态变量s_  成员变量m_
+
+class Poker
+{
+	char m_type;//成员变量前加:  m_
+	int m_point;
+public:
+	/*
+		//构造函数实现方法1
+		Poker()
+		{
+		m_point = 0;
+		m_type = 0;
+		}
+		//构造函数实现方法2
+		Poker():
+			m_point(0),
+			m_type(0)
+		{
+		};
+
+		//有参数构造函数1
+		Poker(char type,int point)
+		{
+			m_type=type;
+			m_point=point;
+		};
+		//有参数构造函数2
+		Poker(char type,int point):
+			m_type(type),
+			m_point(point)
+		{
+		};
+	*/
+
+	void makePoker(char type,int point)
+	{
+		m_type = type;
+		m_point = point;
+		if (m_type==JOKER)
+		{
+			m_point += 13;
+		}
+	}
+	void  outputPoker()
+	{
+		char* type[5] = { "黑桃", "红桃", "梅花", "方片" };
+		char* point[16] = { " ", "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "小王", "大王" };
+		printf("%s%s", type[m_type], point[m_point]);
+	}
+	bool compoker(Poker tmp)
+	{
+		return (m_point < tmp.m_point) || (m_point == tmp.m_point && m_type >tmp.m_type);
+	}
+
+	bool isEff()
+	{
+		if (m_type ==JOKER &&( m_point ==14 || m_point==15))
+		{
+			return true;
+		}
+		if ((unsigned char)m_type>3 ||(unsigned int)m_point-1 >13)
+		{
+			return false;
+		}
+		return true;
+	}
+};
+
+
+class Player
+{
+	Poker m_HandCard[18];
+	int m_size;
+
+public:
+	//m_size 初始化为0
+	/*Player()
+	{
+	m_size = 0;
+	}*/
+	Player() :m_size(0){}
+	//抓牌
+	void getCard(Poker newCard)
+	{
+		//Poker tmp = newCard;
+		int i = 0;
+		//插牌
+		for (i = m_size; i > 0 && m_HandCard[i - 1].compoker(newCard); i--)
+		{
+			m_HandCard[i] = m_HandCard[i - 1];
+		}
+		m_HandCard[i] = newCard;
+		m_size++;
+	}
+
+	void showCard()
+	{
+		for (auto &i : m_HandCard)
+		{
+			i.outputPoker();
+			putchar(' ');
+		}
+		putchar('\n');
+	}
+};
+
+
+void Pokertest()
+{
+	srand((unsigned)time(NULL));
+	Player p1;
+	Poker tmp;
+	int i;
+	for (i = 0; i < 18;i++)
+	{
+		tmp.makePoker(rand() % 4, rand() % 13 + 1);
+		p1.getCard(tmp);
+	}
+	p1.showCard();
+}
+
+int randnum(Poker *cardheap)
+{
+	int tmp = rand() % 54;
+	while (1)
+	{
+		if (cardheap[tmp].isEff())
+		{
+			//cardheap[tmp].makePoker(-1, -1);
+			return tmp;
+		}
+		else
+		{
+			tmp++;
+			if (tmp == 54)
+			{
+				tmp = 0;
+			}
+		}
+	}
+}
+
+int main()
+{
+	Poker tmp[54];
+	Player ayi;
+	Player laoye;
+	Player miao17;
+	int j =0;
+	for (auto &i:tmp)
+	{
+		i.makePoker(j / 13, j % 13 + 1);
+		j++;
+	}
+
+	int delcard;
+	srand((unsigned)time(NULL));
+	int i = 0;
+	for (i = 0; i < 18; i++)
+	{
+		delcard = randnum(tmp);
+		ayi.getCard(tmp[delcard]);
+		tmp[delcard].makePoker(-1, -1);
+
+		delcard = randnum(tmp);
+		laoye.getCard(tmp[delcard]);
+		tmp[delcard].makePoker(-1, -1);
+
+		delcard = randnum(tmp);
+		miao17.getCard(tmp[delcard]);
+		tmp[delcard].makePoker(-1, -1);
+	}
+	ayi.showCard();
+	laoye.showCard();
+	miao17.showCard();
+	system("pause");
+	return 0;
+}
