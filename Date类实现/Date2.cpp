@@ -177,7 +177,5 @@ int main()
 	d2.Display();
 	d2 = d1 + 100;
 	d2.Display();
-	system("pause");
-
-
+	return 0;
 }
