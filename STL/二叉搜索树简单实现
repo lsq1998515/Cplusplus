@@ -1,0 +1,210 @@
+#define _CRT_SECURE_NO_WARNINGS 1
+//二叉搜索树
+//这里的二叉搜索树指的是 根大于左子树小于右子树。
+#include <iostream>
+using namespace std;
+template<class T>
+struct BSTNode
+{
+	BSTNode<T>* _left;
+	BSTNode<T>* _right;
+	T _value;
+	
+	BSTNode(const T& value = T())
+		:_left(nullptr)
+		,_right(nullptr)
+		,_value(value)
+	{}
+};
+
+template<class  T>
+class BSTree
+{
+public:
+	typedef BSTNode<T> Node;
+	typedef Node* pNode;
+
+	//查找
+	 pNode find(const T& value)
+	{
+		pNode cur = _root;
+		while (cur)
+		{
+			if (cur->_value == value)
+				return cur;
+			else if (cur->_value >value)
+				cur = cur->_left;
+			else
+				cur = cur->_right	
+		}
+		return cur;
+	}
+
+	//插入：一般不能插入相同的元素  O(N)
+	//1. 新插入的结点一般在叶子  2.新节点插入后不能破坏二叉搜索树的结构 	
+	//先查找是否存在，然后寻找位置插入
+	bool  insert(const T& value)
+	{
+		//空树
+		if (_root == nullptr)
+		{
+			_root = new Node(value);
+			return true;
+		}
+		//搜索 首先要进行判断有没有已经和要插入结点相同的结点
+		pNode cur = _root;
+		pNode parent = nullptr;
+		while (cur)
+		{
+			parent = cur;
+			if (cur->_value == value)
+			{
+				return  false; //已经存在和要插入结点相同的元素
+			}
+			else if (cur->_value > value)
+				cur = cur->_left;
+			else
+				cur = cur->_right;
+		}
+		cur = new Node(value);
+		//判断节点的位置
+		if (parent->_value > value)
+			parent->_left = cur;
+		else
+			parent->_right = cur;
+		return true;
+	}
+
+	void _inOrder(pNode root)
+	{
+		if (root)
+		{
+			_inOrder(root->_left);
+			cout << root->_value << "  ";
+			_inOrder(root->_right);
+		}
+	}
+	//中序遍历
+	void inOrder()
+	{
+		_inOrder(_root);
+		cout << endl;
+	}
+
+	//删除: 1.叶子节点： 直接删除。父节点对应位置置空 2.非叶子节点
+	bool erase(const T& value)
+	{
+		if (_root == nullptr)
+			return false;
+		pNode cur = _root;
+		pNode parent = nullptr;
+		while (cur)
+		{
+			if (cur->_value ==value)
+				break;
+			else if (cur->_value > value)
+			{
+				parent = cur;
+				cur = cur->_left;
+			}
+			else
+			{
+				parent = cur;
+				cur = cur->_right;
+			}
+		}
+		//判断节点是否存在
+		if (cur == nullptr)
+			return false;
+		//cur->_left ==nullptr  1.cur为叶子节点 2.只有右子树的叶子节点
+		if (cur ->_left == nullptr)
+		{
+			//根和其他节点
+			if (cur != _root) //其他节点
+			{
+				//更新父节点和孩子的链接
+				if (parent->_left == cur)
+					parent->_left = cur->_right;
+				else
+					parent->_right = cur->_right;
+			}
+			else //更新根节点
+				_root = cur->_right;
+			delete cur;
+			cur = nullptr;
+		}
+		else if ( cur->_right ==nullptr)
+		{
+			//根和其他节点
+			if (cur != _root)//其他节点
+			{
+				//更新父亲节点和孩子结点的链接
+				if (parent->_left == cur)
+					parent->_left = cur->_left;
+				else
+					parent->_right = cur->_right;
+			}
+			else //更新根节点
+				_root = cur->_left;
+			delete cur;
+			cur = nullptr;
+		}
+		else
+		{
+			//左右子树存在
+			//1.找左子树的最右结点/右子树的最左结点
+			pNode pNext = cur->_left;
+			pNode parent = cur;
+			while (pNext->_right)
+			{
+				parent = pNext;
+				pNext = pNext->_right;
+			}
+			//交换值
+			cur->_value = pNext->_value;
+			//链接
+			if (parent->_left == pNext)
+				parent->_left = pNext->_left;
+			else
+				parent->_right = pNext->_right;
+			//删除节点
+			delete pNext;
+			pNext = nullptr;
+		}
+		return true;
+	}
+private:
+	pNode _root = nullptr;
+};
+
+void testBSTree()
+{
+	BSTree<int> bst;
+	cout << bst.insert(5) << endl;
+	cout << bst.insert(3) << endl;
+	cout << bst.insert(1) << endl;
+	cout << bst.insert(0) << endl;
+	cout << bst.insert(2) << endl;
+	cout << bst.insert(7) << endl;
+	cout << bst.insert(6) << endl;
+	cout << bst.insert(8) << endl;
+	cout << bst.insert(9) << endl;
+	bst.inOrder();//012356789
+	bst.erase(0);//12356789
+	bst.inOrder();
+	bst.erase(8);//1235679
+	bst.inOrder();
+	bst.erase(3);//125679
+	bst.inOrder();
+	bst.erase(5);//12679
+	bst.inOrder();
+	bst.erase(2);//1679
+	bst.inOrder();
+}
+
+int main()
+{
+	testBSTree();
+	system("pause");
+	return ;  
+}
