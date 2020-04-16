@@ -1,0 +1,318 @@
+#define _CRT_SECURE_NO_WARNINGS 1
+
+#include <iostream>
+#include<time.h>
+#include<assert.h>
+#include<math.h>
+using namespace std;
+
+template<class T>
+struct AVLNode 
+{
+	AVLNode<T>* _left;
+	AVLNode<T>* _right;
+	AVLNode<T>* _parent;
+	T _value;
+	//平衡因子
+	int _bf;
+
+	AVLNode(const T& value = T())
+		:_left(nullptr)
+		, _right(nullptr)
+		, _parent(nullptr)
+		, _value(value)
+		, _bf(0)
+	{
+	}
+};
+
+template<class T>
+class AVLTree
+{
+public:
+	typedef AVLNode<T> Node;
+	typedef Node* PNode;
+
+	//右旋  改变三个结点的6个连接 + 更新平衡因子
+	void RotateR(PNode parent)
+	{
+		PNode subL = parent->_left;//要右旋结点的左孩子
+		PNode subLR = subL->_right;//要右旋结点的左孩子的右孩子
+		//1.
+		subL->_right = parent;
+		//2.
+		parent->_left = subLR;
+		//3.
+		if (subLR)
+			subLR->_parent = parent;
+		//4.5.
+		if (parent != _root)
+		{
+			//subL  <-->   parent->parent 
+			PNode gParent = parent->_parent;
+			if (gParent->_left == parent)
+				gParent->_left = subL;
+			else
+				gParent->_right = subL;
+
+			subL->_parent = gParent;
+		}
+		else
+		{
+			//更新根节点
+			_root = subL;
+			subL->_parent = nullptr;
+		}
+		//6.
+		parent->_parent = subL;
+
+		//更新平衡因子
+		subL->_bf = parent->_bf = 0;
+	}
+
+	//左旋  改变三个结点的6个连接 + 更新平衡因子
+	void RotateL(PNode parent)
+	{
+		PNode subR = parent->_right;
+		PNode subRL = subR->_left;
+		//1.
+		subR->_left = parent;
+		//2.
+		parent->_right = subRL;
+		//3.
+		if (subRL)
+		{
+			subRL->_parent = parent;
+		}
+		//4.5.
+		if (parent != _root)
+		{
+			PNode gParent = parent->_parent;
+			if (gParent->_left == parent)
+				gParent->_left = subR;
+			else
+				gParent->_right = subR;
+
+			subR->_parent = gParent;
+		}
+		else
+		{
+			_root = subR;
+			subR->_parent = nullptr;
+		}
+		//6.
+		parent->_parent = subR;
+
+		//更新平衡因子
+		parent->_bf = subR->_bf = 0;
+	}
+
+	bool insert(const T& value)
+	{
+		//是否为空树
+		if (_root == nullptr)
+		{
+			_root = new Node(value);
+			return true;
+		}
+		//寻找插入位置
+		PNode cur = _root;
+		PNode parent = nullptr;
+		while (cur)
+		{
+			parent = cur;
+			if (cur->_value == value)
+				return false;
+			else if (cur->_value > value)
+				cur = cur->_left;
+			else
+				cur = cur->_right;
+		}
+		//进行插入
+		cur = new Node(value);
+		if (parent->_value > value)
+			parent->_left = cur;
+		else
+			parent->_right = cur;
+		//连接
+		cur->_parent = parent;
+		//更新平衡因子，有可能要进行调整
+		while (parent)
+		{
+			//更新平衡因子
+			//如果孩子在左边，左边的高度增加
+			if (parent->_left == cur)
+				--parent->_bf;
+			else // 如果孩子在右边，右边的高度增加
+				++parent->_bf;
+			//判断平衡因子
+			if (parent->_bf == 0)
+				break;
+			else if (abs(parent->_bf) == 1)
+			{
+				//需要继续向上更新
+				cur = parent;
+				parent = parent->_parent;
+			}
+			else if (abs(parent->_bf) == 2)
+			{
+				//需要旋转
+
+				// 左旋：右边的右边高
+				if (parent->_bf == 2 && cur->_bf == 1)
+				{
+					RotateL(parent);
+				}
+				//右旋： 左边的左边高
+				else if (parent->_bf == -2 && cur->_bf == -1)
+				{
+					RotateR(parent);
+				}
+				//其他情况  
+
+				//左右双旋：左边的右边高 先以孩子为轴左旋，再以父亲为轴右旋
+				else if (parent->_bf == -2 && cur->_bf == 1)
+				{
+					PNode subL = parent->_left;
+					PNode subLR = subL->_right;
+					int bf = subLR->_bf;
+
+					//左右双旋
+					RotateL(cur);
+					RotateR(parent);
+
+					//更新parent 和 subL平衡因子
+					if (bf == 1)
+					{
+						//新插入的结点在subLR的右边
+						parent->_bf = 0;
+						subL->_bf = -1;
+					}
+					else if(bf == -1)
+					{
+						//新插入的结点在subLR的左边
+						subL->_bf = 0;
+						parent->_bf = 1;
+					}
+
+				}
+				//右左双旋：右边的左边高 先以孩子为轴右旋，再以父亲为轴左旋
+				else if (parent->_bf == 2 && cur->_bf == -1)
+				{
+					PNode subR = parent->_right;
+					PNode subRL = subR->_left;
+					int bf = subRL->_bf;
+
+					//右左双旋
+					RotateR(cur);
+					RotateL(parent);
+					//更新parent 和 subL平衡因子
+					if (bf == 1)
+					{
+						//新插入节点在subRL右边
+						subR->_bf = 0;
+						parent->_bf = -1;
+					}
+					else if (bf == -1)
+					{
+						//新插入节点在subRL左边
+						parent->_bf = 0;
+						subR->_bf = 1;
+					}
+				}
+				break;
+			}
+			else
+			{
+				assert(false);
+			}		
+		}
+		return true;
+	}
+	void inOrder()
+	{
+		_inOrder(_root);
+		cout << endl;
+	}
+
+	void _inOrder(PNode root)
+	{
+		if (root){
+			_inOrder(root->_left);
+			cout << root->_value << " ";
+			_inOrder(root->_right);
+		}
+	}
+
+	int height(PNode root)
+	{
+		if (root == nullptr)
+		{
+			return 0;
+		}
+		int left = height(root->_left);
+		int right = height(root->_right);
+		return left > right ? left + 1 : right + 1;
+	}
+
+	bool isAVLTree()
+	{
+		return _isAVLTree(_root);
+	}
+
+	bool _isAVLTree(PNode root)
+	{
+		if (root == nullptr)
+			return true;
+		// 1. 平衡因子绝对值小于2
+		// 2. 平衡因子和左右子树的高度差要一致
+		int left = height(root->_left);
+		int right = height(root->_right);
+		if ((right - left) != root->_bf)
+		{
+			cout << "节点：" << root->_value << "平衡因子异常" << endl;
+			return false;
+		}
+		return abs(root->_bf) < 2 && _isAVLTree(root->_left) && _isAVLTree(root->_right);
+	}
+
+	//AVL树进行删除操作时，需要更新平衡因子，更新平衡因子后为0，还需要继续向上进行更新。更新平衡因子后为-1或者1,就停止向上继续更新。
+private:
+	PNode _root = nullptr;
+};
+
+void  test()
+{
+	AVLTree<int>* avl = new AVLTree<int>();
+	
+	//int arr[] = { 16, 3, 7, 11, 9, 26, 18, 14, 15 }; 
+	int arr[] = { 4, 2, 6, 1, 3, 5, 15, 7, 16, 14 };   
+	for (int i = 0; i < sizeof(arr) / sizeof(arr[0]); ++i)
+	{
+		avl->insert(arr[i]);
+	}
+	avl->inOrder();
+	cout << avl->isAVLTree() <<endl;
+}
+
+void test2()
+{
+	srand(time(nullptr));
+	int n;
+	cin >> n;
+	AVLTree<int>* avl = new AVLTree<int>();
+	for (int i = 0; i < n;i++)
+	{
+		avl->insert(rand());
+	}
+	avl->inOrder();
+	cout << avl->isAVLTree() << endl;
+}
+
+int main()
+{
+	//test();
+	test2();
+	system("pause");
+	return 0;
+}
