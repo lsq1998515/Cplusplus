@@ -1,0 +1,161 @@
+//template<class T>
+//class SmartPtr {
+//public:
+//	SmartPtr(T* ptr = nullptr)
+//		: _ptr(ptr)
+//	{}
+//	~SmartPtr()
+//	{
+//		if (_ptr)
+//			delete _ptr;
+//	}
+//	T* _ptr;
+//};
+//void MergeSort(int* a, int n)
+//{
+//	int* tmp = (int*)malloc(sizeof(int)*n);
+//	// 讲tmp指针委托给了sp对象，用时老师的话说给tmp指针找了一个可怕的女朋友！天天管着你，直到你go die 
+//		SmartPtr<int> sp(tmp);
+//	// _MergeSort(a, 0, n - 1, tmp);
+//	// 这里假设处理了一些其他逻辑
+//	vector<int> v(1000000000, 10);
+//	// ...
+//}
+//int main()
+//{
+//	try {
+//		int a[5] = { 4, 5, 2, 3, 1 };
+//		MergeSort(a, 5);
+//	}
+//	catch (const exception& e)
+//	{
+//		cout << e.what() << endl;
+//	}
+//	return 0;
+//}
+
+#if 0
+
+//智能指针：1.实现RAII思想，2.实现指针的操作
+template<class T>
+class SmartPtr {
+public:
+	SmartPtr(T* ptr = nullptr)
+		: _ptr(ptr)
+	{}
+	~SmartPtr()
+	{
+		if (_ptr)
+		{
+			delete _ptr;
+			cout << "delete" << endl;
+			_ptr = nullptr;
+		}
+	}
+
+	//实现指针功能：解引用 ->
+
+	T& operator*()
+	{
+		return *_ptr;
+	}
+		
+	T* operator->()
+	{
+		return _ptr;
+	}
+
+private:
+	T* _ptr;
+};
+
+class A
+{
+public:
+	int _a = 1;
+	int _b = 2;
+	int _c = 3;
+	~A()
+	{
+		cout << "~A()" << endl;
+	}
+};
+
+
+int main()
+{
+	/*
+	//常规的指针
+	int* pi = new int(2);
+	cout << *pi << endl;
+	*pi = 3;
+	cout << *pi << endl;
+	//普通指针malloc后需要手动释放
+	delete pi;
+	//智能指针
+	cout << "SmartPtr:" << endl;
+	SmartPtr<int> sp(new int(10));
+	cout << *sp << endl;
+	*sp = 20;
+	cout << *sp << endl;
+	//智能指针编译器会在指针对象使用完成后，进行自动调用析构函数进行释放。
+	*/
+
+	/*
+	A* pa = new A();
+	pa->_a = 10;
+	pa->_b = 20;
+
+	SmartPtr<A> sp2(new A());
+	//sp2->_a = 10;
+	(*sp2)._a = 10;
+	sp2.operator->()->_b = 100;
+	cout << sp2->_a << endl;
+	cout << sp2->_b << endl;
+	*/
+
+	/*
+	//多个智能指针对象管理同一份资源，仅被释放一次。
+	//一般禁止使用
+	auto_ptr<A>sp3(new A());//库里的智能指针
+	sp3->_a = 20;
+	cout << sp3->_a << endl;
+
+	auto_ptr<A>copy(sp3);//假如两个auto_ptr智能指针同时管理一份资源，就会造成资源二次释放。
+	copy->_a = 100;
+
+	auto_ptr<A>copy2(copy);
+	copy2->_b = 1;
+	*/
+
+	/*
+	//使用自己定义的智能指针多次释放
+	SmartPtr<A>sp3(new A());
+	sp3->_a = 20;
+	cout << sp3->_a << endl;
+	SmartPtr<A> copy (sp3);//假如多个个我们自己实现智能指针同时管理一份资源，就会造成资源二次释放。
+	copy->_a = 100;
+	SmartPtr<A> copy2 (copy);
+	copy2->_b = 1;
+	*/
+
+	auto_ptr<A>sp3(new A());//库里的智能指针
+	sp3->_a = 20;
+	cout << sp3->_a << endl;
+
+	auto_ptr<A>copy(sp3);//这里发生一次拷贝，顺便将资源的管理权交给新的对象，它不会再拥有管理资源的能力
+	
+	//sp3已经完成对资源管理权的转移，因此无法访问到_a成员，sp3指针被悬空，因此在这里程序会崩溃，空指针无法解引用。
+	//指针悬空
+	//sp3->_a = 1;
+
+	copy->_a = 100;
+	auto_ptr<A>copy2(copy);
+	//管理权转移，指针悬空，因此不能解引用访问。
+	//copy->_b = 1;
+
+	copy2->_b = 1;
+	//system("pause");
+	return 0;
+}
+#endif
