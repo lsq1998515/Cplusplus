@@ -1,0 +1,184 @@
+#if 0
+//循环引用 造成无法释放结点
+template <class T>
+class ListNode
+{
+public:
+	shared_ptr<ListNode<T>> _prev;
+	shared_ptr<ListNode<T>> _next;
+	~ListNode()
+	{ 
+		cout << "~ListNode()" << endl; 
+	}
+};
+
+void test3()
+{
+	shared_ptr<ListNode<int>> sp(new ListNode<int>());
+	shared_ptr<ListNode<int>> sp2(new ListNode<int>());
+	cout << sp.use_count() << endl;//1
+	cout << sp2.use_count() << endl;//1
+	sp->_next = sp2;
+	sp2->_prev = sp;
+	cout << sp.use_count() << endl;//2
+	cout << sp2.use_count() << endl;//2
+
+	//无法释放空间，没调用析构函数
+}
+
+int main()
+{
+	test3();
+	system("pause");
+	return 0;
+}
+
+#endif
+
+
+#if 0
+//解决循环引用方法
+template <class T>
+class ListNode
+{
+public:
+	//weak_ptr:不会管理资源，也不会修改引用计数
+	weak_ptr<ListNode<T>> _prev;
+	weak_ptr<ListNode<T>> _next;
+	~ListNode()
+	{
+		cout << "~ListNode()" << endl;
+	}
+};
+
+void test3()
+{
+	shared_ptr<ListNode<int>> sp(new ListNode<int>());
+	shared_ptr<ListNode<int>> sp2(new ListNode<int>());
+	cout << sp.use_count() << endl;//1
+	cout << sp2.use_count() << endl;//1
+	sp->_next = sp2;
+	sp2->_prev = sp;
+	cout << sp.use_count() << endl;//1
+	cout << sp2.use_count() << endl;//1
+	
+	//weak_ptr: 不可以单独使用，需要借助shared_ptr进行初始化。
+	weak_ptr<int> wp(new int(2));
+}
+
+int main()
+{
+	test3();
+	system("pause");
+	return 0;
+}
+#endif
+
+
+
+#if 0
+
+//仿函数的删除器,定制删除器
+class B
+{
+public:
+	~B()
+	{
+		cout << "~B()" << endl;
+	}
+};
+
+template <class T>
+class DeleteArray
+{
+public:
+	//仿函数 ： 重载括号运算符函数
+	void operator() (T* ptr)
+	{
+		cout << "delete[]" << ptr << endl;
+		delete[] ptr;
+	}
+};
+
+template <class T>
+class FreeDelete
+{
+public:
+	//仿函数 ： 重载括号运算符函数
+	void operator() (T* ptr)
+	{
+		cout << "free:" << ptr << endl;
+		free(ptr);
+	}
+};
+
+
+void test4()
+{
+	shared_ptr<int> sp(new int[10], DeleteArray<int>());
+	shared_ptr<int> sp2((int*)malloc(100), FreeDelete<int>());
+
+	shared_ptr<B> sp3(new B[10], DeleteArray<B>());
+	shared_ptr<B> sp4((B*)malloc(100),FreeDelete<B>());
+}
+
+int main()
+{
+	test4();
+	system("pause");
+	return 0;
+}
+
+#endif
+
+
+
+//守卫锁 也是利用RAII思想,利用对象声明周期管理锁的生命周期：构造加锁，析构解锁。
+template<class Mtx>
+class LockGuard
+{
+public:
+	LockGuard(Mtx& mtx)
+		:_mtx(mtx)
+	{
+		_mtx.lock();
+	}
+	~LockGuard()
+	{
+		cout << "~LockGuard()" << endl;
+		_mtx.unlock();
+	}
+	//防拷贝，   如果可以拷贝的话，导致多个对象同时解锁，而一个锁不能被解锁多次，因此需要防拷贝
+	LockGuard(const LockGuard<Mtx>& lg) = delete;
+
+private:
+	// 注意这里必须使用引用，不支持拷贝，否则锁的就不是一个互斥量对象
+	Mtx& _mtx;
+};
+
+mutex mtx;
+void fun()
+{
+	int i;
+	cin >> i;
+	//mtx.lock();
+	LockGuard<mutex> lg(mtx);
+	if (i == 9)
+	{
+		return;
+		cout << i << endl;
+	}
+	//mtx.unlock();
+	
+}
+
+int main()
+{
+	thread t1(fun);
+	thread t2(fun);
+	t1.join();
+	t2.join();
+	system("pause");
+	return 0;
+}
+
