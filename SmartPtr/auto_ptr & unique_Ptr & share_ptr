@@ -1,0 +1,1070 @@
+/*
+
+//测试 系统中auto_ptr智能指针，在对同一块空间被多个对象使用而造成程序奔溃问题
+class A
+{
+public:
+	int _a = 1;
+	int _b = 2;
+	int _c = 3;
+	~A()
+	{
+		cout << "~A()" << endl;
+	}
+};
+
+int main()
+{
+	auto_ptr<A>sp3(new A());//库里的智能指针
+	sp3->_a = 20;
+	cout << sp3->_a << endl;
+
+	auto_ptr<A>copy(sp3);//这里发生一次拷贝，顺便将资源的管理权交给新的对象，它不会再拥有管理资源的能力
+
+	//sp3已经完成对资源管理权的转移，因此无法访问到_a成员，sp3指针被悬空，因此在这里程序会崩溃，空指针无法解引用。
+	//指针悬空
+	//sp3->_a = 1;
+
+	copy->_a = 100;
+	auto_ptr<A>copy2(copy);
+	//管理权转移，指针悬空，因此copy不能进行解引用访问。
+	//copy->_b = 1;
+
+	copy2->_b = 1;
+	//system("pause");
+	return 0;
+}
+
+*/
+
+
+/*
+//模拟实现auto_ptr智能指针： 解决之前的auto_ptr存在二次释放问题
+template<class T>
+class AutoPtr {
+public:
+	AutoPtr(T* ptr = nullptr)
+		: _ptr(ptr)
+	{}
+	~AutoPtr()
+	{
+		if (_ptr)
+		{
+			delete _ptr;
+			cout << "delete" << endl;
+			_ptr = nullptr;
+		}
+	}
+
+	// 一旦发生拷贝，就将ap中资源转移到当前对象中，然后另ap与其所管理资源断开联系，
+	// 这样就解决了一块空间被多个对象使用而造成程序奔溃问题
+	//浅拷贝，指针只是管理资源，不拥有资源
+	//管理权转移 拷贝构造
+	AutoPtr(AutoPtr<T>& ap)
+		:_ptr(ap._ptr)
+	{
+		ap._ptr = nullptr;
+	}
+
+	//赋值运算符重载
+	AutoPtr<T>& operator=(AutoPtr<T>& ap)
+	{
+		// 检测是否为自己给自己赋值
+		if (this != ap)
+		{
+			// 释放当前对象中资源
+			if (_ptr)
+				delete _ptr;
+			//管理权转移
+			// 转移ap中资源到当前对象中
+			_ptr = ap._ptr;
+			ap._ptr = nullptr;	
+		}
+		return *this;
+	}
+
+	//实现指针功能：解引用 ->
+
+	T& operator*()
+	{
+		return *_ptr;
+	}
+
+	T* operator->()
+	{
+		return _ptr;
+	}
+
+private:
+	T* _ptr;
+};
+
+class A
+{
+public:
+	int _a = 1;
+	int _b = 2;
+	int _c = 3;
+	~A()
+	{
+		cout << "~A()" << endl;
+	}
+};
+
+int main()
+{
+	AutoPtr<A> sp4(new A());
+	sp4->_a = 10;
+
+	AutoPtr<A> copy3(sp4);
+	copy3->_a = 100;
+
+	AutoPtr<A> copy4(copy3);
+	copy4->_b = 1;
+	//只会调用一次析构 一次 delete
+	//system("pause");
+	return 0;
+}
+
+*/
+
+#if 0
+//unique_Ptr测试与模拟实现
+
+
+//模拟实现Unique_Ptr:只需要禁止掉拷贝构造和赋值运算符重载函数
+template<class T>
+class UniquePtr {
+public:
+	UniquePtr(T* ptr = nullptr)
+		: _ptr(ptr)
+	{}
+	~UniquePtr()
+	{
+		if (_ptr)
+		{
+			delete _ptr;
+			cout << "delete" << endl;
+			_ptr = nullptr;
+		}
+	}
+
+	//禁止掉拷贝构造和赋值运算符重载函数:有两种方法 {1}使用C++11语法delete  {2}将两个函数定义为私有，只声明不实现
+
+	//禁止拷贝构造 
+	//C++11语法 声明成delete函数
+	UniquePtr(UniquePtr<T>& ap) = delete;
+	//C++11语法
+	//禁止赋值运算符重载 声明成delete函数
+	UniquePtr<T>& operator=(UniquePtr<T>& ap) = delete;
+
+	//实现指针功能：解引用 还有  ->
+
+	T& operator*()
+	{
+		return *_ptr;
+	}
+
+	T* operator->()
+	{
+		return _ptr;
+	}
+
+private:
+
+	//定义成私有，只声明不实现
+	//防拷贝构造 
+	UniquePtr(UniquePtr<T>& ap);
+	//防赋值运算符重载
+	UniquePtr<T>& operator=(UniquePtr<T>& ap);
+
+	T* _ptr;
+};
+
+
+class A
+{
+public:
+	int _a = 1;
+	int _b = 2;
+	int _c = 3;
+	~A()
+	{
+		cout << "~A()" << endl;
+	}
+};
+
+int main()
+{
+	unique_ptr<A> up(new A());
+	up->_a = 10;
+	/*
+	unique_ptr<A> up2(new A());
+	//使用库里面unique_ptr：它禁止相互间的赋值行为，防赋值
+	up2 = up;
+	//使用库里面unique_ptr：它禁止相互间的拷贝行为,防拷贝
+	unique_ptr<A> copy(up);
+	*/
+
+	/*
+	//使用自己实现的UniquePtr测试拷贝和赋值操作
+	UniquePtr<A> up3(new A());
+	UniquePtr<A> copy2(up3);
+	UniquePtr<A> up4(new A());
+	up4 = up3;
+	*/
+
+	//system("pause");
+    return 0;
+}
+#endif
+
+
+
+//share_ptr使用测试,与模拟实现
+#if 0
+class A
+{
+public:
+	int _a = 1;
+	int _b = 2;
+	int _c = 3;
+	~A()
+	{
+		cout << "~A()" << endl;
+	}
+};
+int main()
+{
+	shared_ptr<A> sp(new A());
+	//查看引用计数，看当前资源被几个指针管理
+	cout << sp.use_count() << endl;//1
+	//可以拷贝
+	shared_ptr<A> cope(sp);
+	cout << cope.use_count() << endl;//2
+	//可以赋值
+	shared_ptr<A> sp2(new A());
+	cout << sp2.use_count() << endl;//1
+	sp2 = sp;
+	cout << sp2.use_count() << endl;//3
+	//程序结束释放两次delte
+	system("pause");
+	return 0;
+}
+#endif
+/*
+//shared_ptr模拟实现:释放时采用引用计数方法
+template<class T>
+class SharedPtr{
+public:
+	SharedPtr(T* ptr)
+		:_ptr(ptr)
+		, _pcount(new int(1))
+		, _mtx(new mutex())
+	{}
+
+	SharedPtr(SharedPtr<T>& sp)
+		:_ptr(sp._ptr)
+		, _pcount(sp._pcount)
+		, _mtx(sp._mtx)
+	{
+		_mtx->lock();
+		++(*_pcount);
+		_mtx->unlock();
+	}
+	
+	SharedPtr<T>& operator=(SharedPtr<T>& sp)
+	{
+		//if (this != sp)
+		if (_ptr != sp._ptr)
+		{
+			_mtx->lock();
+			--(*_pcount);
+			_mtx->unlock();
+			if (*_pcount == 0)
+			{
+				delete _pcount;
+				delete _ptr;
+			}
+			_ptr = sp._ptr;
+			_pcount = sp._pcount;
+
+			_mtx->lock();
+			++(*_pcount);
+			_mtx->unlock();
+		}
+		return *this;
+	}
+
+	~SharedPtr()
+	{
+		_mtx->lock();
+		--(*_pcount);
+		_mtx->unlock();
+		if (*_pcount == 0)
+		{
+			if (_ptr)
+			{
+				delete _ptr;
+				delete _pcount;
+				cout << "delete _ptr" << endl;
+				_ptr = nullptr;
+				_pcount = nullptr;
+			}
+		}
+	}
+
+	//实现指针功能：解引用 还有  ->
+	T& operator*()
+	{
+		return *_ptr;
+	}
+
+	T* operator->()
+	{
+		return _ptr;
+	}
+
+
+	int useCount()
+	{
+		return *_pcount;
+	}
+
+private:
+	T* _ptr;
+
+	int *_pcount;
+	//不能给成静态的  不能使用一个引用计数表示所有资源被引用的数量，应该每一个资源都拥有自己的引用计数
+	//static int _count;
+
+	mutex* _mtx;//保证原子性操作
+};
+
+//template<class T>
+//int SharedPtr<T>::_count = 0;
+
+
+int main()
+{
+	SharedPtr<int> sp(new int(1));
+	SharedPtr<int> sp2(new int(2));
+	cout << sp.useCount() << endl;//1
+	cout << sp2.useCount() << endl;//1
+	SharedPtr<int> copy(sp);
+	cout << sp.useCount() << endl;//2
+	cout << copy.useCount() << endl;//2
+
+	sp2 = sp;
+	cout << sp.useCount() << endl;//3
+	cout << sp2.useCount() << endl;//3
+	copy = sp;
+	cout << copy.useCount() << endl;//3
+	cout << sp.useCount() << endl;//3
+	
+	system("pause");
+	return 0;
+}
+*/
+
+
+#if 0
+
+template<class T>
+class SharedPtr{
+public:
+	SharedPtr(T* ptr)
+		:_ptr(ptr)
+		, _pcount(new int(1))
+		, _mtx(new mutex())
+	{}
+
+	SharedPtr(SharedPtr<T>& sp)
+		:_ptr(sp._ptr)
+		, _pcount(sp._pcount)
+		, _mtx(sp._mtx)
+	{
+		/*_mtx->lock();
+		++(*_pcount);
+		_mtx->unlock();*/
+		addRef();
+	}
+
+	SharedPtr<T>& operator=(SharedPtr<T>& sp)
+	{
+		//if (this != sp)
+		if (_ptr != sp._ptr)
+		{
+			/*_mtx->lock();
+			--(*_pcount);
+			_mtx->unlock();*/
+			if (subRef() == 0)
+			{
+				delete _pcount;
+				delete _ptr;
+			}
+			_ptr = sp._ptr;
+			_pcount = sp._pcount;
+
+			/*_mtx->lock();
+			++(*_pcount);
+			_mtx->unlock();*/
+			addRef();
+		}
+		return *this;
+	}
+
+	~SharedPtr()
+	{
+		
+		/*_mtx->lock();
+		--(*_pcount);
+		_mtx->unlock();*/
+		if (subRef() == 0)
+		{
+			if (_ptr)
+			{
+				delete _ptr;
+				delete _pcount;
+				cout << "delete _ptr" << endl;
+				_ptr = nullptr;
+				_pcount = nullptr;
+			}
+		}
+	}
+
+	//实现指针功能：解引用 还有  ->
+	T& operator*()
+	{
+		return *_ptr;
+	}
+
+	T* operator->()
+	{
+		return _ptr;
+	}
+
+
+	int useCount()
+	{
+		return *_pcount;
+	}
+
+	int addRef()
+	{
+		_mtx->lock();
+		++(*_pcount);
+		_mtx->unlock();
+		return *_pcount;
+	}
+
+	int subRef()
+	{
+		_mtx->lock();
+		--(*_pcount);
+		_mtx->unlock();
+		return *_pcount;
+	}
+
+private:
+	T* _ptr;
+
+	int *_pcount;
+	//不能给成静态的  不能使用一个引用计数表示所有资源被引用的数量，应该每一个资源都拥有自己的引用计数
+	//static int _count;
+
+	mutex* _mtx;//保证原子性操作
+};
+
+
+#include<thread>
+mutex mtx;
+//使用自己定义的 SharedPtr
+void fun(SharedPtr<int>& sp, int n)
+{
+	for (int i = 1; i <= n; ++i)
+	{
+		mtx.lock();
+		++(*sp);
+		mtx.unlock();
+		SharedPtr<int> copy(sp);
+	}
+}
+void test1()
+{
+	int n = 10000;
+	SharedPtr<int> sp(new int(0));
+	thread t1(fun, sp, n);
+	thread t2(fun, sp, n);
+	t1.join();
+	t2.join();
+	cout << *sp << endl;//不确定
+	cout << sp.useCount() << endl;//1
+}
+//使用库里面的 shared_ptr
+void fun2(shared_ptr<int>sp, int n)
+{
+	for (int i = 0; i < n; ++i)
+	{
+		mtx.lock();
+		++(*sp);
+		mtx.unlock();
+		shared_ptr<int> copy(sp);
+	}
+}
+
+
+void test2()
+{
+	int n = 10000;
+	shared_ptr<int> sp(new int(0));
+	thread t1(fun2, sp, n);
+	thread t2(fun2, sp, n);
+	t1.join();
+	t2.join();
+	cout << *sp << endl;//不确定
+	cout << sp.use_count() << endl;//1
+}
+
+int main()
+{
+	test1();
+	//test2();
+	system("pause");
+	return 0;
+}
+/*
+
+//测试 系统中auto_ptr智能指针，在对同一块空间被多个对象使用而造成程序奔溃问题
+class A
+{
+public:
+	int _a = 1;
+	int _b = 2;
+	int _c = 3;
+	~A()
+	{
+		cout << "~A()" << endl;
+	}
+};
+
+int main()
+{
+	auto_ptr<A>sp3(new A());//库里的智能指针
+	sp3->_a = 20;
+	cout << sp3->_a << endl;
+
+	auto_ptr<A>copy(sp3);//这里发生一次拷贝，顺便将资源的管理权交给新的对象，它不会再拥有管理资源的能力
+
+	//sp3已经完成对资源管理权的转移，因此无法访问到_a成员，sp3指针被悬空，因此在这里程序会崩溃，空指针无法解引用。
+	//指针悬空
+	//sp3->_a = 1;
+
+	copy->_a = 100;
+	auto_ptr<A>copy2(copy);
+	//管理权转移，指针悬空，因此copy不能进行解引用访问。
+	//copy->_b = 1;
+
+	copy2->_b = 1;
+	//system("pause");
+	return 0;
+}
+
+*/
+
+
+/*
+//模拟实现auto_ptr智能指针： 解决之前的auto_ptr存在二次释放问题
+template<class T>
+class AutoPtr {
+public:
+	AutoPtr(T* ptr = nullptr)
+		: _ptr(ptr)
+	{}
+	~AutoPtr()
+	{
+		if (_ptr)
+		{
+			delete _ptr;
+			cout << "delete" << endl;
+			_ptr = nullptr;
+		}
+	}
+
+	// 一旦发生拷贝，就将ap中资源转移到当前对象中，然后另ap与其所管理资源断开联系，
+	// 这样就解决了一块空间被多个对象使用而造成程序奔溃问题
+	//浅拷贝，指针只是管理资源，不拥有资源
+	//管理权转移 拷贝构造
+	AutoPtr(AutoPtr<T>& ap)
+		:_ptr(ap._ptr)
+	{
+		ap._ptr = nullptr;
+	}
+
+	//赋值运算符重载
+	AutoPtr<T>& operator=(AutoPtr<T>& ap)
+	{
+		// 检测是否为自己给自己赋值
+		if (this != ap)
+		{
+			// 释放当前对象中资源
+			if (_ptr)
+				delete _ptr;
+			//管理权转移
+			// 转移ap中资源到当前对象中
+			_ptr = ap._ptr;
+			ap._ptr = nullptr;	
+		}
+		return *this;
+	}
+
+	//实现指针功能：解引用 ->
+
+	T& operator*()
+	{
+		return *_ptr;
+	}
+
+	T* operator->()
+	{
+		return _ptr;
+	}
+
+private:
+	T* _ptr;
+};
+
+class A
+{
+public:
+	int _a = 1;
+	int _b = 2;
+	int _c = 3;
+	~A()
+	{
+		cout << "~A()" << endl;
+	}
+};
+
+int main()
+{
+	AutoPtr<A> sp4(new A());
+	sp4->_a = 10;
+
+	AutoPtr<A> copy3(sp4);
+	copy3->_a = 100;
+
+	AutoPtr<A> copy4(copy3);
+	copy4->_b = 1;
+	//只会调用一次析构 一次 delete
+	//system("pause");
+	return 0;
+}
+
+*/
+
+#if 0
+//unique_Ptr测试与模拟实现
+
+
+//模拟实现Unique_Ptr:只需要禁止掉拷贝构造和赋值运算符重载函数
+template<class T>
+class UniquePtr {
+public:
+	UniquePtr(T* ptr = nullptr)
+		: _ptr(ptr)
+	{}
+	~UniquePtr()
+	{
+		if (_ptr)
+		{
+			delete _ptr;
+			cout << "delete" << endl;
+			_ptr = nullptr;
+		}
+	}
+
+	//禁止掉拷贝构造和赋值运算符重载函数:有两种方法 {1}使用C++11语法delete  {2}将两个函数定义为私有，只声明不实现
+
+	//禁止拷贝构造 
+	//C++11语法 声明成delete函数
+	UniquePtr(UniquePtr<T>& ap) = delete;
+	//C++11语法
+	//禁止赋值运算符重载 声明成delete函数
+	UniquePtr<T>& operator=(UniquePtr<T>& ap) = delete;
+
+	//实现指针功能：解引用 还有  ->
+
+	T& operator*()
+	{
+		return *_ptr;
+	}
+
+	T* operator->()
+	{
+		return _ptr;
+	}
+
+private:
+
+	//定义成私有，只声明不实现
+	//防拷贝构造 
+	UniquePtr(UniquePtr<T>& ap);
+	//防赋值运算符重载
+	UniquePtr<T>& operator=(UniquePtr<T>& ap);
+
+	T* _ptr;
+};
+
+
+class A
+{
+public:
+	int _a = 1;
+	int _b = 2;
+	int _c = 3;
+	~A()
+	{
+		cout << "~A()" << endl;
+	}
+};
+
+int main()
+{
+	unique_ptr<A> up(new A());
+	up->_a = 10;
+	/*
+	unique_ptr<A> up2(new A());
+	//使用库里面unique_ptr：它禁止相互间的赋值行为，防赋值
+	up2 = up;
+	//使用库里面unique_ptr：它禁止相互间的拷贝行为,防拷贝
+	unique_ptr<A> copy(up);
+	*/
+
+	/*
+	//使用自己实现的UniquePtr测试拷贝和赋值操作
+	UniquePtr<A> up3(new A());
+	UniquePtr<A> copy2(up3);
+	UniquePtr<A> up4(new A());
+	up4 = up3;
+	*/
+
+	//system("pause");
+    return 0;
+}
+#endif
+
+
+
+//share_ptr使用测试,与模拟实现
+#if 0
+class A
+{
+public:
+	int _a = 1;
+	int _b = 2;
+	int _c = 3;
+	~A()
+	{
+		cout << "~A()" << endl;
+	}
+};
+int main()
+{
+	shared_ptr<A> sp(new A());
+	//查看引用计数，看当前资源被几个指针管理
+	cout << sp.use_count() << endl;//1
+	//可以拷贝
+	shared_ptr<A> cope(sp);
+	cout << cope.use_count() << endl;//2
+	//可以赋值
+	shared_ptr<A> sp2(new A());
+	cout << sp2.use_count() << endl;//1
+	sp2 = sp;
+	cout << sp2.use_count() << endl;//3
+	//程序结束释放两次delte
+	system("pause");
+	return 0;
+}
+#endif
+/*
+//shared_ptr模拟实现:释放时采用引用计数方法
+template<class T>
+class SharedPtr{
+public:
+	SharedPtr(T* ptr)
+		:_ptr(ptr)
+		, _pcount(new int(1))
+		, _mtx(new mutex())
+	{}
+
+	SharedPtr(SharedPtr<T>& sp)
+		:_ptr(sp._ptr)
+		, _pcount(sp._pcount)
+		, _mtx(sp._mtx)
+	{
+		_mtx->lock();
+		++(*_pcount);
+		_mtx->unlock();
+	}
+	
+	SharedPtr<T>& operator=(SharedPtr<T>& sp)
+	{
+		//if (this != sp)
+		if (_ptr != sp._ptr)
+		{
+			_mtx->lock();
+			--(*_pcount);
+			_mtx->unlock();
+			if (*_pcount == 0)
+			{
+				delete _pcount;
+				delete _ptr;
+			}
+			_ptr = sp._ptr;
+			_pcount = sp._pcount;
+
+			_mtx->lock();
+			++(*_pcount);
+			_mtx->unlock();
+		}
+		return *this;
+	}
+
+	~SharedPtr()
+	{
+		_mtx->lock();
+		--(*_pcount);
+		_mtx->unlock();
+		if (*_pcount == 0)
+		{
+			if (_ptr)
+			{
+				delete _ptr;
+				delete _pcount;
+				cout << "delete _ptr" << endl;
+				_ptr = nullptr;
+				_pcount = nullptr;
+			}
+		}
+	}
+
+	//实现指针功能：解引用 还有  ->
+	T& operator*()
+	{
+		return *_ptr;
+	}
+
+	T* operator->()
+	{
+		return _ptr;
+	}
+
+
+	int useCount()
+	{
+		return *_pcount;
+	}
+
+private:
+	T* _ptr;
+
+	int *_pcount;
+	//不能给成静态的  不能使用一个引用计数表示所有资源被引用的数量，应该每一个资源都拥有自己的引用计数
+	//static int _count;
+
+	mutex* _mtx;//保证原子性操作
+};
+
+//template<class T>
+//int SharedPtr<T>::_count = 0;
+
+
+int main()
+{
+	SharedPtr<int> sp(new int(1));
+	SharedPtr<int> sp2(new int(2));
+	cout << sp.useCount() << endl;//1
+	cout << sp2.useCount() << endl;//1
+	SharedPtr<int> copy(sp);
+	cout << sp.useCount() << endl;//2
+	cout << copy.useCount() << endl;//2
+
+	sp2 = sp;
+	cout << sp.useCount() << endl;//3
+	cout << sp2.useCount() << endl;//3
+	copy = sp;
+	cout << copy.useCount() << endl;//3
+	cout << sp.useCount() << endl;//3
+	
+	system("pause");
+	return 0;
+}
+*/
+
+
+#if 0
+
+template<class T>
+class SharedPtr{
+public:
+	SharedPtr(T* ptr)
+		:_ptr(ptr)
+		, _pcount(new int(1))
+		, _mtx(new mutex())
+	{}
+
+	SharedPtr(SharedPtr<T>& sp)
+		:_ptr(sp._ptr)
+		, _pcount(sp._pcount)
+		, _mtx(sp._mtx)
+	{
+		/*_mtx->lock();
+		++(*_pcount);
+		_mtx->unlock();*/
+		addRef();
+	}
+
+	SharedPtr<T>& operator=(SharedPtr<T>& sp)
+	{
+		//if (this != sp)
+		if (_ptr != sp._ptr)
+		{
+			/*_mtx->lock();
+			--(*_pcount);
+			_mtx->unlock();*/
+			if (subRef() == 0)
+			{
+				delete _pcount;
+				delete _ptr;
+			}
+			_ptr = sp._ptr;
+			_pcount = sp._pcount;
+
+			/*_mtx->lock();
+			++(*_pcount);
+			_mtx->unlock();*/
+			addRef();
+		}
+		return *this;
+	}
+
+	~SharedPtr()
+	{
+		
+		/*_mtx->lock();
+		--(*_pcount);
+		_mtx->unlock();*/
+		if (subRef() == 0)
+		{
+			if (_ptr)
+			{
+				delete _ptr;
+				delete _pcount;
+				cout << "delete _ptr" << endl;
+				_ptr = nullptr;
+				_pcount = nullptr;
+			}
+		}
+	}
+
+	//实现指针功能：解引用 还有  ->
+	T& operator*()
+	{
+		return *_ptr;
+	}
+
+	T* operator->()
+	{
+		return _ptr;
+	}
+
+
+	int useCount()
+	{
+		return *_pcount;
+	}
+
+	int addRef()
+	{
+		_mtx->lock();
+		++(*_pcount);
+		_mtx->unlock();
+		return *_pcount;
+	}
+
+	int subRef()
+	{
+		_mtx->lock();
+		--(*_pcount);
+		_mtx->unlock();
+		return *_pcount;
+	}
+
+private:
+	T* _ptr;
+
+	int *_pcount;
+	//不能给成静态的  不能使用一个引用计数表示所有资源被引用的数量，应该每一个资源都拥有自己的引用计数
+	//static int _count;
+
+	mutex* _mtx;//保证原子性操作
+};
+
+
+#include<thread>
+mutex mtx;
+//使用自己定义的 SharedPtr
+void fun(SharedPtr<int>& sp, int n)
+{
+	for (int i = 1; i <= n; ++i)
+	{
+		mtx.lock();
+		++(*sp);
+		mtx.unlock();
+		SharedPtr<int> copy(sp);
+	}
+}
+void test1()
+{
+	int n = 10000;
+	SharedPtr<int> sp(new int(0));
+	thread t1(fun, sp, n);
+	thread t2(fun, sp, n);
+	t1.join();
+	t2.join();
+	cout << *sp << endl;//不确定
+	cout << sp.useCount() << endl;//1
+}
+//使用库里面的 shared_ptr
+void fun2(shared_ptr<int>sp, int n)
+{
+	for (int i = 0; i < n; ++i)
+	{
+		mtx.lock();
+		++(*sp);
+		mtx.unlock();
+		shared_ptr<int> copy(sp);
+	}
+}
+
+
+void test2()
+{
+	int n = 10000;
+	shared_ptr<int> sp(new int(0));
+	thread t1(fun2, sp, n);
+	thread t2(fun2, sp, n);
+	t1.join();
+	t2.join();
+	cout << *sp << endl;//不确定
+	cout << sp.use_count() << endl;//1
+}
+
+int main()
+{
+	test1();
+	//test2();
+	system("pause");
+	return 0;
+}
